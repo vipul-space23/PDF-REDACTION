@@ -1,238 +1,452 @@
 
-import { useState } from 'react';
-import { Upload, FileText, AlertTriangle, CheckCircle, X, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+// import React, { useState } from 'react';
+// import { FilePond, registerPlugin } from 'react-filepond';
+// import 'filepond/dist/filepond.min.css';
+// import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
 
-export default function FileUploader() {
-  const [files, setFiles] = useState<File[]>([]);
-  const [dragging, setDragging] = useState(false);
-  const [processing, setProcessing] = useState<Record<string, boolean>>({});
-  const [processingResults, setProcessingResults] = useState<Record<string, {status: 'clean' | 'flagged', count: number}>>({});
-  const { toast } = useToast();
+// // Register FilePond plugins
+// registerPlugin(FilePondPluginFileValidateType);
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragging(true);
-  };
+// interface UploadResponse {
+//   status: string;
+//   file_id?: string;
+//   filename?: string;
+//   file_path?: string;
+//   message?: string;
+// }
 
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragging(false);
-  };
+// const FileUploader: React.FC = () => {
+//   const [files, setFiles] = useState<any[]>([]);
+//   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+//   const [isPasswordRequired, setIsPasswordRequired] = useState<boolean>(false);
+//   const [password, setPassword] = useState<string>('');
+//   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+//   const [fileId, setFileId] = useState<string | null>(null);
+//   const [fileName, setFileName] = useState<string | null>(null);
+//   const [isDecrypted, setIsDecrypted] = useState<boolean>(false);
+//   const [downloadLink, setDownloadLink] = useState<string | null>(null);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragging(false);
+//   // Function to handle file upload
+//   const handleProcessFile = async (fileItems: any[]) => {
+//     if (fileItems.length === 0) {
+//       resetState();
+//       return;
+//     }
+
+//     setFiles(fileItems);
+//     setIsProcessing(true);
+//     setStatusMessage('Uploading and checking file...');
     
-    if (e.dataTransfer.files) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      addFiles(newFiles);
-    }
-  };
+//     const file = fileItems[0].file;
+//     const formData = new FormData();
+//     formData.append('pdf', file);
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      addFiles(newFiles);
-    }
-  };
+//     try {
+//       const response = await fetch('http://localhost:8000/upload', {
+//         method: 'POST',
+//         body: formData,
+//       });
 
-  const addFiles = (newFiles: File[]) => {
-    // Only accept txt, pdf, docx, doc files
-    const validFiles = newFiles.filter(file => {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      return ['txt', 'pdf', 'docx', 'doc'].includes(extension || '');
-    });
+//       const data: UploadResponse = await response.json();
 
-    if (validFiles.length !== newFiles.length) {
-      toast({
-        title: "Invalid file types",
-        description: "Only .txt, .pdf, .docx, and .doc files are supported",
-        variant: "destructive"
-      });
-    }
+//       if (data.status === 'password_required') {
+//         setStatusMessage('This PDF is password-protected. Please enter the password to proceed.');
+//         setIsPasswordRequired(true);
+//         setFileId(data.file_id || null);
+//         setFileName(data.filename || null);
+//       } else if (data.status === 'ready_for_processing') {
+//         setStatusMessage('PDF is ready for processing!');
+//         setIsPasswordRequired(false);
+//         setIsDecrypted(true);
+//         setFileId(data.file_id || null);
+//         setFileName(data.filename || null);
+        
+//         if (data.file_id && data.filename) {
+//           setDownloadLink(`http://localhost:8000/file/${data.file_id}/${data.filename}`);
+//         }
+//       }
+//     } catch (error) {
+//       console.error('Error uploading file:', error);
+//       setStatusMessage('Error uploading file. Please try again.');
+//     } finally {
+//       setIsProcessing(false);
+//     }
+//   };
 
-    if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles]);
-      
-      // Simulate processing each file
-      validFiles.forEach(file => {
-        simulateProcessing(file);
-      });
-    }
-  };
+//   // Function to handle password submission
+//   const handlePasswordSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!fileId || !fileName) return;
 
-  const simulateProcessing = (file: File) => {
-    setProcessing(prev => ({ ...prev, [file.name]: true }));
+//     setIsProcessing(true);
+//     setStatusMessage('Decrypting PDF...');
+
+//     const formData = new FormData();
+//     formData.append('file_id', fileId);
+//     formData.append('filename', fileName);
+//     formData.append('password', password);
+
+//     try {
+//       const response = await fetch('http://localhost:8000/decrypt', {
+//         method: 'POST',
+//         body: formData,
+//       });
+
+//       const data: UploadResponse = await response.json();
+
+//       if (data.status === 'decrypted') {
+//         setStatusMessage('PDF successfully decrypted and ready for processing!');
+//         setIsPasswordRequired(false);
+//         setIsDecrypted(true);
+        
+//         if (data.file_id && data.filename) {
+//           setDownloadLink(`http://localhost:8000/file/${data.file_id}/${data.filename}`);
+//         }
+//       } else if (data.status === 'wrong_password') {
+//         setStatusMessage('Incorrect password. Please try again.');
+//         setPassword('');
+//       } else {
+//         setStatusMessage(data.message || 'Failed to decrypt PDF. Please try again.');
+//       }
+//     } catch (error) {
+//       console.error('Error submitting password:', error);
+//       setStatusMessage('Error processing password. Please try again.');
+//     } finally {
+//       setIsProcessing(false);
+//     }
+//   };
+
+//   // Reset all state when starting over
+//   const resetState = () => {
+//     setStatusMessage(null);
+//     setIsPasswordRequired(false);
+//     setIsDecrypted(false);
+//     setPassword('');
+//     setFileId(null);
+//     setFileName(null);
+//     setDownloadLink(null);
     
-    // Simulate AI processing time
-    setTimeout(() => {
-      // Randomly determine if the file has PII
-      const hasPII = Math.random() > 0.5;
-      const piiCount = hasPII ? Math.floor(Math.random() * 10) + 1 : 0;
-      
-      setProcessingResults(prev => ({
-        ...prev, 
-        [file.name]: {
-          status: piiCount > 0 ? 'flagged' : 'clean',
-          count: piiCount
+//     // Clean up files on the server if we have a file ID
+//     if (fileId && fileName) {
+//       fetch(`http://localhost:8000/file/${fileId}/${fileName}`, {
+//         method: 'DELETE',
+//       }).catch(error => {
+//         console.error('Error cleaning up files:', error);
+//       });
+//     }
+//   };
+
+//   // Proceed to next step after successful upload/decryption
+//   const handleProceedToAnalysis = () => {
+//     // Here you would implement the next steps in your workflow
+//     setStatusMessage('Proceeding to PII analysis...');
+    
+//     // This is where you'd navigate to the next step or change the UI state
+//     // For example: router.push(`/analyze?fileId=${fileId}&fileName=${fileName}`);
+//   };
+
+//   return (
+//     <div className="space-y-6">
+//       <FilePond
+//         files={files}
+//         onupdatefiles={handleProcessFile}
+//         allowMultiple={false}
+//         acceptedFileTypes={['application/pdf']}
+//         labelIdle='Drag & Drop your PDF or <span class="filepond--label-action">Browse</span>'
+//         disabled={isProcessing}
+//       />
+
+//       {statusMessage && (
+//         <div className={`p-4 rounded-md ${isDecrypted ? 'bg-green-800/30 text-green-400' : 'bg-blue-800/30 text-blue-300'}`}>
+//           <p>{statusMessage}</p>
+//         </div>
+//       )}
+
+//       {isProcessing && (
+//         <div className="flex items-center justify-center">
+//           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neonGreen"></div>
+//           <span className="ml-2 text-softWhite/70">Processing...</span>
+//         </div>
+//       )}
+
+//       {isPasswordRequired && (
+//         <form onSubmit={handlePasswordSubmit} className="mt-4">
+//           <div className="flex flex-col sm:flex-row gap-3">
+//             <input
+//               type="password"
+//               placeholder="Enter PDF Password"
+//               value={password}
+//               onChange={(e) => setPassword(e.target.value)}
+//               className="flex-grow px-4 py-2 bg-darkGrey border border-neonGreen/30 rounded-md focus:outline-none focus:ring-2 focus:ring-neonGreen/50"
+//               disabled={isProcessing}
+//             />
+//             <button
+//               type="submit"
+//               className="px-4 py-2 bg-neonGreen text-black font-medium rounded-md hover:bg-neonGreen/80 transition-colors disabled:opacity-50"
+//               disabled={isProcessing || !password}
+//             >
+//               Decrypt PDF
+//             </button>
+//           </div>
+//         </form>
+//       )}
+
+//       {isDecrypted && (
+//         <div className="flex flex-col sm:flex-row gap-3">
+//           {downloadLink && (
+//             <a
+//               href={downloadLink}
+//               target="_blank"
+//               rel="noopener noreferrer"
+//               className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors text-center"
+//             >
+//               View Decrypted PDF
+//             </a>
+//           )}
+//           <button
+//             onClick={handleProceedToAnalysis}
+//             className="px-4 py-2 bg-neonGreen text-black font-medium rounded-md hover:bg-neonGreen/80 transition-colors"
+//           >
+//             Proceed to PII Analysis
+//           </button>
+//         </div>
+//       )}
+//     </div>
+//   );
+// };
+
+// export default FileUploader;
+import React, { useState } from 'react';
+import { FilePond, registerPlugin } from 'react-filepond';
+import 'filepond/dist/filepond.min.css';
+import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+
+// Register FilePond plugins
+registerPlugin(FilePondPluginFileValidateType);
+
+interface UploadResponse {
+  status: string;
+  file_id?: string;
+  filename?: string;
+  file_path?: string;
+  message?: string;
+}
+
+const FileUploader: React.FC = () => {
+  const [files, setFiles] = useState<any[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isPasswordRequired, setIsPasswordRequired] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [fileId, setFileId] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isDecrypted, setIsDecrypted] = useState<boolean>(false);
+  const [downloadLink, setDownloadLink] = useState<string | null>(null);
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // Function to handle file upload
+  const handleProcessFile = async (fileItems: any[]) => {
+    if (fileItems.length === 0) {
+      resetState();
+      return;
+    }
+
+    setFiles(fileItems);
+    setIsProcessing(true);
+    setStatusMessage('Uploading and checking file...');
+    
+    const file = fileItems[0].file;
+    const formData = new FormData();
+    formData.append('pdf', file);
+
+    try {
+      const response = await fetch('http://localhost:8000/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data: UploadResponse = await response.json();
+
+      if (data.status === 'password_required') {
+        setStatusMessage('This PDF is password-protected. Please enter the password to proceed.');
+        setIsPasswordRequired(true);
+        setFileId(data.file_id || null);
+        setFileName(data.filename || null);
+      } else if (data.status === 'ready_for_processing') {
+        setStatusMessage('PDF is ready for processing!');
+        setIsPasswordRequired(false);
+        setIsDecrypted(true);
+        setFileId(data.file_id || null);
+        setFileName(data.filename || null);
+        
+        if (data.file_id && data.filename) {
+          setDownloadLink(`http://localhost:8000/file/${data.file_id}/${data.filename}`);
+          // Store file info in sessionStorage for Preview.tsx
+          sessionStorage.setItem('currentFile', JSON.stringify({
+            name: data.filename,
+            size: file.size,
+            piiCount: 0, // Update this if backend provides PII count
+          }));
+          // Navigate to Preview.tsx with file data
+          navigate('/preview', { state: { fileId: data.file_id, fileName: data.filename } });
         }
-      }));
-      
-      setProcessing(prev => ({ ...prev, [file.name]: false }));
-      
-      toast({
-        title: piiCount > 0 ? "PII Detected" : "File is Clean",
-        description: piiCount > 0 
-          ? `Found ${piiCount} instances of PII in ${file.name}`
-          : `No PII found in ${file.name}`,
-        variant: piiCount > 0 ? "destructive" : "default"
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      setStatusMessage('Error uploading file. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Function to handle password submission
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fileId || !fileName) return;
+
+    setIsProcessing(true);
+    setStatusMessage('Decrypting PDF...');
+
+    const formData = new FormData();
+    formData.append('file_id', fileId);
+    formData.append('filename', fileName);
+    formData.append('password', password);
+
+    try {
+      const response = await fetch('http://localhost:8000/decrypt', {
+        method: 'POST',
+        body: formData,
       });
-    }, 2000);
+
+      const data: UploadResponse = await response.json();
+
+      if (data.status === 'decrypted') {
+        setStatusMessage('PDF successfully decrypted and ready for processing!');
+        setIsPasswordRequired(false);
+        setIsDecrypted(true);
+        
+        if (data.file_id && data.filename) {
+          setDownloadLink(`http://localhost:8000/file/${data.file_id}/${data.filename}`);
+          // Store file info in sessionStorage for Preview.tsx
+          sessionStorage.setItem('currentFile', JSON.stringify({
+            name: data.filename,
+            size: files[0].file.size,
+            piiCount: 0, // Update this if backend provides PII count
+          }));
+          // Navigate to Preview.tsx with file data
+          navigate('/preview', { state: { fileId: data.file_id, fileName: data.filename } });
+        }
+      } else if (data.status === 'wrong_password') {
+        setStatusMessage('Incorrect password. Please try again.');
+        setPassword('');
+      } else {
+        setStatusMessage(data.message || 'Failed to decrypt PDF. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting password:', error);
+      setStatusMessage('Error processing password. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const removeFile = (fileName: string) => {
-    setFiles(prev => prev.filter(file => file.name !== fileName));
+  // Reset all state when starting over
+  const resetState = () => {
+    setStatusMessage(null);
+    setIsPasswordRequired(false);
+    setIsDecrypted(false);
+    setPassword('');
+    setFileId(null);
+    setFileName(null);
+    setDownloadLink(null);
     
-    // Also remove from processing and results
-    setProcessing(prev => {
-      const newState = { ...prev };
-      delete newState[fileName];
-      return newState;
-    });
-    
-    setProcessingResults(prev => {
-      const newState = { ...prev };
-      delete newState[fileName];
-      return newState;
-    });
+    if (fileId && fileName) {
+      fetch(`http://localhost:8000/file/${fileId}/${fileName}`, {
+        method: 'DELETE',
+      }).catch(error => {
+        console.error('Error cleaning up files:', error);
+      });
+    }
   };
 
-  const clearAllFiles = () => {
-    setFiles([]);
-    setProcessing({});
-    setProcessingResults({});
+  // Proceed to next step after successful upload/decryption
+  const handleProceedToAnalysis = () => {
+    if (fileId && fileName) {
+      navigate('/preview', { state: { fileId, fileName } });
+    } else {
+      setStatusMessage('No file available for analysis.');
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div 
-        className={cn("upload-zone", dragging && "border-neonGreen bg-cyberBlue/50")}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="text-center">
-          <Upload className="mx-auto h-12 w-12 text-neonGreen mb-4" />
-          <h3 className="text-xl font-semibold text-softWhite mb-2">Drag & Drop Files</h3>
-          <p className="text-softWhite/70 text-sm mb-4">
-            or click to upload .txt, .pdf, .docx, .doc files
-          </p>
-          <input
-            type="file"
-            className="hidden"
-            id="fileInput"
-            onChange={handleFileInput}
-            multiple
-            accept=".txt,.pdf,.docx,.doc"
-          />
-          <Button 
-            onClick={() => document.getElementById('fileInput')?.click()}
-            className="neon-button"
-          >
-            Browse Files
-          </Button>
-        </div>
-      </div>
+      <FilePond
+        files={files}
+        onupdatefiles={handleProcessFile}
+        allowMultiple={false}
+        acceptedFileTypes={['application/pdf']}
+        labelIdle='Drag & Drop your PDF or <span class="filepond--label-action">Browse</span>'
+        disabled={isProcessing}
+      />
 
-      {files.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Uploaded Files ({files.length})</h3>
-            <Button 
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFiles}
-              className="text-softWhite/70 hover:text-neonGreen"
+      {statusMessage && (
+        <div className={`p-4 rounded-md ${isDecrypted ? 'bg-green-800/30 text-green-400' : 'bg-blue-800/30 text-blue-300'}`}>
+          <p>{statusMessage}</p>
+        </div>
+      )}
+
+      {isProcessing && (
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-neonGreen"></div>
+          <span className="ml-2 text-softWhite/70">Processing...</span>
+        </div>
+      )}
+
+      {isPasswordRequired && (
+        <form onSubmit={handlePasswordSubmit} className="mt-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="password"
+              placeholder="Enter PDF Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="flex-grow px-4 py-2 bg-darkGrey border border-neonGreen/30 rounded-md focus:outline-none focus:ring-2 focus:ring-neonGreen/50"
+              disabled={isProcessing}
+            />
+            <button
+              type="submit"
+              className="px-4 py-2 bg-neonGreen text-black font-medium rounded-md hover:bg-neonGreen/80 transition-colors disabled:opacity-50"
+              disabled={isProcessing || !password}
             >
-              Clear All
-            </Button>
+              Decrypt PDF
+            </button>
           </div>
-          
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-            {files.map((file) => (
-              <div 
-                key={file.name} 
-                className={cn(
-                  "flex items-center justify-between bg-cyberBlue/30 rounded-lg p-3 border",
-                  processing[file.name] ? "border-cyberPurple/50 scan-effect" : 
-                  processingResults[file.name]?.status === 'flagged' ? "border-red-500/50" : 
-                  processingResults[file.name]?.status === 'clean' ? "border-neonGreen/50" : 
-                  "border-softWhite/10"
-                )}
-              >
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-softWhite/70" />
-                  <div>
-                    <p className="text-sm font-medium truncate max-w-xs">{file.name}</p>
-                    <p className="text-xs text-softWhite/50">{(file.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3">
-                  {processing[file.name] && (
-                    <div className="flex items-center text-cyberPurple">
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                      <span className="text-xs">Scanning</span>
-                    </div>
-                  )}
-                  
-                  {processingResults[file.name] && !processing[file.name] && (
-                    <div className={cn(
-                      "flex items-center text-xs rounded-full px-2 py-1",
-                      processingResults[file.name].status === 'flagged' 
-                        ? "bg-red-500/10 text-red-500" 
-                        : "bg-green-500/10 text-green-500"
-                    )}>
-                      {processingResults[file.name].status === 'flagged' ? (
-                        <>
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          <span>{processingResults[file.name].count} PII Found</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          <span>Clean</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 rounded-full hover:bg-red-500/10 hover:text-red-500"
-                    onClick={() => removeFile(file.name)}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="pt-4 border-t border-cyberBlue">
-            <Button 
-              className="w-full bg-neonGreen text-cyberBlue hover:bg-neonGreen/90"
-              disabled={!files.length || Object.keys(processing).some(k => processing[k])}
+        </form>
+      )}
+
+      {isDecrypted && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          {downloadLink && (
+            <a
+              href={downloadLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors text-center"
             >
-              Process All Files
-            </Button>
-          </div>
+              View Decrypted PDF
+            </a>
+          )}
+          <button
+            onClick={handleProceedToAnalysis}
+            className="px-4 py-2 bg-neonGreen text-black font-medium rounded-md hover:bg-neonGreen/80 transition-colors"
+          >
+            Proceed to PII Analysis
+          </button>
         </div>
       )}
     </div>
   );
-}
+};
+
+export default FileUploader;
